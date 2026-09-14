@@ -1,20 +1,22 @@
 use logos::Logos;
 
 #[derive(Logos, Debug, PartialEq)]
-#[logos(skip r"[ \t\n\f]+")]
-pub enum TokenKind {
+#[logos(skip r"[ \t\n\r]+")]
+pub enum Token {
+    #[token("=")]
+    Assign,
     #[token("+")]
     Add,
     #[token("+=")]
     AddAssign,
     #[token("++")]
-    Adds,
+    Increment,
     #[token("-")]
     Sub,
     #[token("-=")]
     SubAssign,
     #[token("--")]
-    Subs,
+    Decrement,
     #[token("*")]
     Mul,
     #[token("*=")]
@@ -23,6 +25,9 @@ pub enum TokenKind {
     Div,
     #[token("/=")]
     DivAssign,
+
+    #[token(";")]
+    Semicolon,
 
     #[token("(")]
     OpenParen,
@@ -46,6 +51,8 @@ pub enum TokenKind {
     #[token("if")]
     KwIf,
 
-    #[regex("[a-zA-Z]+")]
+    #[regex("[a-zA-Z_][a-zA-Z0-9_]*")]
     Identifier,
+    #[regex("[0-9]+")]
+    Number,
 }

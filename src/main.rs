@@ -1,5 +1,10 @@
+use std::fs::OpenOptions;
+use std::io::Read;
 use std::path::PathBuf;
+use std::time::Instant;
 use clap::Parser;
+use logos::{Logos};
+use crate::token::Token;
 
 mod token;
 
@@ -9,8 +14,25 @@ struct Args {
     file: PathBuf,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
+    let mut file = OpenOptions::new()
+        .read(true)
+        .open(args.file).expect("could not open file");
+    let mut source = String::new();
+    file.read_to_string(&mut source)?;
+    
+    let start = Instant::now();
+    
+    let mut lex = Token::lexer(source.as_str());
+    let mut tokens = Vec::new();
+    while let Some(Ok(t)) = lex.next() {
+        tokens.push(t);
+    }
+    
+    let time = start.elapsed();
+    println!("{}", time.as_nanos());
 
+    Ok(())
 }
