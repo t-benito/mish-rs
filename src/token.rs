@@ -1,8 +1,8 @@
-use logos::Logos;
+use logos::{Logos, Span};
 
 #[derive(Logos, Debug, PartialEq)]
 #[logos(skip r"[ \t\n\r]+")]
-pub enum Token {
+pub enum TokenKind {
     #[token("=")]
     Assign,
     #[token("+")]
@@ -55,4 +55,9 @@ pub enum Token {
     Identifier,
     #[regex("[0-9]+")]
     Number,
+}
+
+pub struct Token {
+    pub kind: TokenKind,
+    pub span: Span,
 }

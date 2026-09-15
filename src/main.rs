@@ -3,10 +3,12 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::time::Instant;
 use clap::Parser;
-use logos::{Logos};
-use crate::token::Token;
+use logos::Logos;
+use crate::token::{Token, TokenKind};
 
 mod token;
+mod parser;
+mod error;
 
 #[derive(Parser, Debug)]
 #[command(name = "talon")]
@@ -25,10 +27,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let start = Instant::now();
     
-    let mut lex = Token::lexer(source.as_str());
+    let mut lex = TokenKind::lexer(source.as_str());
     let mut tokens = Vec::new();
-    while let Some(Ok(t)) = lex.next() {
-        tokens.push(t);
+    while let Some(Ok(kind)) = lex.next() {
+        tokens.push(Token{
+            kind,
+            span: lex.span(),
+        });
     }
     
     let time = start.elapsed();
