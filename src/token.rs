@@ -1,6 +1,6 @@
 use logos::{Logos, Span};
 
-#[derive(Logos, Debug, PartialEq)]
+#[derive(Logos, Debug, PartialEq, Clone)]
 #[logos(skip r"[ \t\n\r]+")]
 pub enum TokenKind {
     #[token("=")]
@@ -54,9 +54,14 @@ pub enum TokenKind {
     #[regex("[a-zA-Z_][a-zA-Z0-9_]*")]
     Identifier,
     #[regex("[0-9]+")]
-    Number,
+    IntegerLiteral,
+    #[regex(r"-?[0-9]+\.[0-9]+")]
+    FloatLiteral,
+    #[regex(r#""[^"]*""#)]
+    StringLiteral,
 }
 
+#[derive(Clone)]
 pub struct Token {
     pub kind: TokenKind,
     pub span: Span,

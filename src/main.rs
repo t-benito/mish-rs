@@ -9,6 +9,7 @@ use crate::token::{Token, TokenKind};
 mod token;
 mod parser;
 mod error;
+mod node;
 
 #[derive(Parser, Debug)]
 #[command(name = "talon")]
@@ -28,6 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let start = Instant::now();
     
     let mut lex = TokenKind::lexer(source.as_str());
+
     let mut tokens = Vec::new();
     while let Some(Ok(kind)) = lex.next() {
         tokens.push(Token{
@@ -35,7 +37,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             span: lex.span(),
         });
     }
-    
+
+    let mut parse = parser::Parser::new(tokens, &*source);
+    let nodes = parse.run();
+
     let time = start.elapsed();
     println!("{}", time.as_nanos());
 

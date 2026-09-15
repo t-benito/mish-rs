@@ -9,9 +9,9 @@ pub enum ParseError {
 }
 
 pub struct Error {
-    message: String,
-    kind: ErrorKind,
-    span: Span,
+    pub(crate) message: String,
+    pub(crate) kind: ErrorKind,
+    pub(crate) span: Span,
 }
 
 pub struct ErrorLogger<'e> {
