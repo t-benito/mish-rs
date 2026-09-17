@@ -3,7 +3,7 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::time::Instant;
 use clap::Parser;
-use logos::Logos;
+use logos::{Logos, Span};
 use crate::token::{Token, TokenKind};
 
 mod token;
@@ -12,7 +12,7 @@ mod error;
 mod node;
 
 #[derive(Parser, Debug)]
-#[command(name = "talon")]
+#[command(name = "mish")]
 struct Args {
     file: PathBuf,
 }
@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut file = OpenOptions::new()
         .read(true)
-        .open(args.file).expect("could not open file");
+        .open(args.file)?;
     let mut source = String::new();
     file.read_to_string(&mut source)?;
     
@@ -37,6 +37,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             span: lex.span(),
         });
     }
+    tokens.push(Token{
+        kind: TokenKind::EOF,
+        span: Span { start: 0, end: 0 }
+    });
 
     let mut parse = parser::Parser::new(tokens, &*source);
     let nodes = parse.run();

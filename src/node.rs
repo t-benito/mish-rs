@@ -3,7 +3,7 @@ use crate::token::TokenKind;
 
 #[derive(Debug)]
 pub enum Data {
-    /* These are indices for the token vector */
+    // Usizes here are "pointers" to values on the token vector
     Identifier(usize),
     String(usize),
     Integer(usize),
@@ -17,6 +17,22 @@ pub enum Data {
     UnaryOp {
         op: TokenKind,
         target: Box<Node>,
+    },
+    VarDeclaration {
+        name: usize,
+        mutable: bool,
+        ty: Box<Node>,
+        value: Box<Node>
+    },
+    FnDeclaration {
+        name: usize,
+        params: Option< Vec<Node> >,
+        return_type: Box<Node>,
+        body: Vec<Node>,
+    },
+    FnParameter {
+        ty: Box<Node>,
+        name: usize
     }
 }
 

@@ -3,6 +3,19 @@ use logos::{Logos, Span};
 #[derive(Logos, Debug, PartialEq, Clone)]
 #[logos(skip r"[ \t\n\r]+")]
 pub enum TokenKind {
+    #[token("==")]
+    Equal,
+    #[token("!=")]
+    NotEqual,
+    #[token(">")]
+    Greater,
+    #[token(">=")]
+    GreaterEqual,
+    #[token("<")]
+    Lesser,
+    #[token("<=")]
+    LesserEqual,
+    
     #[token("=")]
     Assign,
     #[token("+")]
@@ -59,6 +72,8 @@ pub enum TokenKind {
     FloatLiteral,
     #[regex(r#""[^"]*""#)]
     StringLiteral,
+
+    EOF,
 }
 
 #[derive(Clone)]
