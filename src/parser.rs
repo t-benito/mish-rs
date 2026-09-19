@@ -1,11 +1,11 @@
 use logos::Span;
 use crate::error::{Error, ErrorLogger, ParseError};
 use crate::error::ErrorKind::Parse;
-use crate::node::{Data, Node};
+use crate::node::{Data, Node, ParseType, ParseTypeBase};
 use crate::token::{Token, TokenKind};
 
 pub struct Parser<'a> {
-    tokens: Vec<Token>,
+    tokens: &'a [Token],
     source: &'a str,
     logger: ErrorLogger<'a>,
 
@@ -13,7 +13,7 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(tokens: Vec<Token>, source: &'a str) -> Self {
+    pub fn new(tokens: &'a [Token], source: &'a str) -> Self {
         Self {
             tokens,
             source,
@@ -30,12 +30,6 @@ impl<'a> Parser<'a> {
         self.current += 1;
         token.clone()
     }
-    // fn previous(&self) -> Option<&Token> {
-    //     if self.current == 0 {
-    //         return None;
-    //     }
-    //     self.tokens.get(self.current - 1)
-    // }
     fn expect(&mut self, expected: TokenKind) -> Result<Token, ParseError> {
         let token = self.advance();
         if token.kind == expected {
@@ -66,11 +60,33 @@ impl<'a> Parser<'a> {
             if let Ok(node) = maybenode {
                 nodes.push(node);
             } else {
-                //self.synchronize()
-                // though im too lazy to make that now....
+                self.synchronize()
             }
         }
         Ok(nodes)
+    }
+
+    pub fn synchronize(&mut self) {
+        while !self.is_at_end() {
+            match self.peek().kind {
+                TokenKind::KwLet
+                | TokenKind::KwConst
+                | TokenKind::KwElse
+                | TokenKind::KwIf
+                | TokenKind::KwAlias
+                | TokenKind::KwStruct
+                | TokenKind::KwUnion
+                | TokenKind::KwEnum
+                | TokenKind::KwRtn
+                | TokenKind::EOF
+                | TokenKind::CompKwDefine
+                | TokenKind::CompKwSizeof
+                | TokenKind::KwFn => break,
+                _ => {}
+            }
+            self.advance();
+        }
+        return;
     }
 
     pub fn parse_item(&mut self) -> Result<Node, ParseError> {
@@ -88,9 +104,20 @@ impl<'a> Parser<'a> {
             }
         }
     }
-    
+
     pub fn parse_stmt(&mut self) -> Result<Node, ParseError> {
-        
+        match self.peek().kind {
+            TokenKind::KwConst => self.parse_var(false),
+            TokenKind::KwLet => self.parse_var(true),
+            _ => {
+                self.logger.add_error(Error {
+                    message: "expected statement".to_string(),
+                    kind: Parse(ParseError::UnexpectedToken),
+                    span: self.peek().span,
+                });
+                Err(ParseError::UnexpectedToken)
+            }
+        }
     }
 
     pub fn get_importance(&self, kind: &TokenKind) -> u8 {
@@ -111,7 +138,7 @@ impl<'a> Parser<'a> {
             TokenKind::Add
             | TokenKind::Sub => 5,
 
-            TokenKind::Mul
+            TokenKind::Star
             | TokenKind::Div => 6,
 
             _ => 0,
@@ -161,7 +188,7 @@ impl<'a> Parser<'a> {
             if importance == 0 || importance <= min_importance {
                 break;
             }
-            _ = self.advance();
+            self.advance();
 
             match op.kind {
                 _ => {
@@ -182,8 +209,85 @@ impl<'a> Parser<'a> {
         Ok(lhs)
     }
     
-    pub fn parse_type(&mut self) -> Result<Node, ParseError> {
-        
+    pub fn parse_type(&mut self) -> Result<ParseType, ParseError> {
+        let first_token = self.advance();
+
+        let mut origin = match first_token.kind {
+            TokenKind::KwLong => {
+                let mut next = self.parse_type()?;
+                if next.long {
+                    self.logger.add_error(Error {
+                        message: "unexpected duplicate 'long'".to_string(),
+                        kind: Parse(ParseError::UnexpectedTypeDuplicate),
+                        span: first_token.span,
+                    });
+                    return Err(ParseError::UnexpectedTypeDuplicate);
+                }
+                next.long = true;
+                next
+            }
+            TokenKind::KwUnsigned => {
+                let mut next = self.parse_type()?;
+                if next.unsigned {
+                    self.logger.add_error(Error {
+                        message: "unexpected duplicate 'unsigned'".to_string(),
+                        kind: Parse(ParseError::UnexpectedTypeDuplicate),
+                        span: first_token.span,
+                    });
+                    return Err(ParseError::UnexpectedTypeDuplicate);
+                }
+                next.unsigned = true;
+                next
+            }
+            TokenKind::KwInt => {
+                ParseType {
+                    base: ParseTypeBase::Int,
+                    long: false,
+                    unsigned: false,
+                }
+            }
+            TokenKind::KwChar => {
+                ParseType {
+                    base: ParseTypeBase::Char,
+                    long: false,
+                    unsigned: false,
+                }
+            }
+            _ => {
+                self.logger.add_error(Error{
+                    message: "expected type statement".to_string(),
+                    kind: Parse(ParseError::UnexpectedToken),
+                    span: first_token.span,
+                });
+                return Err(ParseError::UnexpectedToken);
+              }
+        };
+
+        loop {
+            match self.peek().kind {
+                TokenKind::Star => {
+                    self.advance();
+                    origin = ParseType {
+                        unsigned: false,
+                        long: false,
+                        base: ParseTypeBase::Pointer(Box::new(origin)),
+                    }
+                }
+                TokenKind::OpenBracket => {
+                    self.advance();
+                    let len = self.parse_expr(0)?;
+                    self.expect(TokenKind::CloseBracket)?;
+                    origin = ParseType {
+                        unsigned: false,
+                        long: false,
+                        base: ParseTypeBase::Array(Box::new(origin), len),
+                    }
+                }
+                _ => break,
+            }
+        }
+
+        Ok(origin)
     }
 
     pub fn parse_var(&mut self, mutable: bool) -> Result<Node, ParseError> {
@@ -192,7 +296,6 @@ impl<'a> Parser<'a> {
 
         let name = self.current;
         _ = self.expect(TokenKind::Identifier)?;
-        
         _ = self.expect(TokenKind::Assign)?;
         let value = self.parse_expr(0)?;
         Ok(Node {
@@ -222,12 +325,13 @@ impl<'a> Parser<'a> {
                 if self.peek().kind == TokenKind::CloseParen {
                     break;
                 }
+                let start = self.peek().span.start;
                 let p_ty = self.parse_type()?;
                 let p_name = self.current;
-                _  = self.expect(TokenKind::Identifier)?;
+                self.expect(TokenKind::Identifier)?;
 
                 params.get_or_insert_with(Vec::new).push(Node {
-                    span: Span { start: p_ty.span.start, end: self.peek().span.end },
+                    span: Span { start, end: self.peek().span.end },
                     data: Data::FnParameter {
                         name: p_name,
                         ty: Box::new(p_ty),
@@ -248,7 +352,7 @@ impl<'a> Parser<'a> {
             body.push(stmt);
         };
         let end = self.expect(TokenKind::CloseBody)?;
-        
+
         Ok(Node {
             data: Data::FnDeclaration {
                 name,

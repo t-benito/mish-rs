@@ -1,3 +1,5 @@
+extern crate core;
+
 use std::fs::OpenOptions;
 use std::io::Read;
 use std::path::PathBuf;
@@ -10,6 +12,7 @@ mod token;
 mod parser;
 mod error;
 mod node;
+mod printer;
 
 #[derive(Parser, Debug)]
 #[command(name = "mish")]
@@ -25,11 +28,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .open(args.file)?;
     let mut source = String::new();
     file.read_to_string(&mut source)?;
+
+    println!("\r0/3");
     
     let start = Instant::now();
     
     let mut lex = TokenKind::lexer(source.as_str());
 
+    println!("\r1/3");
+    
     let mut tokens = Vec::new();
     while let Some(Ok(kind)) = lex.next() {
         tokens.push(Token{
@@ -42,8 +49,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         span: Span { start: 0, end: 0 }
     });
 
-    let mut parse = parser::Parser::new(tokens, &*source);
+    println!("\r2/3");
+    
+    let mut parse = parser::Parser::new(tokens.as_slice(), &source);
     let nodes = parse.run();
+    if nodes.is_err() {
+        std::process::exit(1);
+    }
+
+    println!("\r3/3");
+    
+    printer::ASTPrinter::new(&printer::ASTContext { tokens: tokens.as_slice(), source: &source });
 
     let time = start.elapsed();
     println!("{}", time.as_nanos());

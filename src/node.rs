@@ -21,23 +21,57 @@ pub enum Data {
     VarDeclaration {
         name: usize,
         mutable: bool,
-        ty: Box<Node>,
+        ty: Box<ParseType>,
         value: Box<Node>
     },
     FnDeclaration {
         name: usize,
         params: Option< Vec<Node> >,
-        return_type: Box<Node>,
+        return_type: Box<ParseType>,
         body: Vec<Node>,
     },
     FnParameter {
-        ty: Box<Node>,
+        ty: Box<ParseType>,
         name: usize
     }
 }
 
 #[derive(Debug)]
 pub struct Node {
-    pub(crate) data: Data,
-    pub(crate) span: Span,
+    pub data: Data,
+    pub span: Span,
+}
+
+#[derive(Debug)]
+pub enum ParseTypeBase {
+    Char,       // 8 bit
+    Void,
+
+    Byte,       // 8 bit
+    Short,      // 16 bit
+    Int,        // 32 bit
+
+    Float,      // 32 bit floating
+
+    Pointer(Box<ParseType>),
+    Array(Box<ParseType>, Node),
+    Function {
+        params: Vec<ParseType>,
+        return_type: Box<ParseType>,
+        variadic: bool,
+    },
+
+    Struct(Span),
+    Union(Span),
+    Enum(Span),
+
+    Alias(Span),
+}
+
+#[derive(Debug)]
+pub struct ParseType {
+    pub base: ParseTypeBase,
+
+    pub unsigned: bool,
+    pub long: bool,
 }

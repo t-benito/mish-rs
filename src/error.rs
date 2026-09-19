@@ -6,6 +6,7 @@ pub enum ErrorKind {
 
 pub enum ParseError {
     UnexpectedToken,
+    UnexpectedTypeDuplicate
 }
 
 pub struct Error {
@@ -29,5 +30,15 @@ impl<'e> ErrorLogger<'e> {
 
     pub fn add_error(&mut self, error: Error) {
         self.errors.push(error);
+    }
+    
+    pub fn dump(&mut self) -> bool {
+        if self.errors.is_empty() {
+            return false;
+        }
+        for error in self.errors.iter() {
+            eprintln!("error: {}", error.message);
+        }
+        true
     }
 }

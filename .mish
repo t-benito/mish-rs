@@ -1,0 +1,33 @@
+use std;
+
+const println = std.fmt.println
+
+fn int main(int argc, char*[] argv) {
+    if (argc == 0) {
+        println("Incorrect arguments. Use -h or --help to see arguments");
+        rtn 1;
+    }
+
+    if ((std.mem.eqlc(argv[0], "-h") or std.mem.eqlc(argv[0], "--help")) and argc == 1) {
+        println("
+Super cool cli tool
+v1.0.0
+
+Usage:
+
+--help          Display this message
+--str <STRING>  String to multiply
+--count <COUNT> How many times to multiply");
+        rtn 0;
+    }
+
+    if (argc != 2) {
+        println("Incorrect arguments. Use -h or --help to see arguments");
+        rtn 1;
+    }
+
+    let long float*[16] tests;
+    for (i) : (i < 16) : (i++) {
+        tests[i] = 0.0;
+    }
+}
